@@ -1,0 +1,36 @@
+html,
+body {
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.app {
+    height: 100%;
+
+    .row {
+        margin: 0;
+        padding: 0;
+    }
+}
+
+.file-drop {
+    min-height: 70vh;
+
+    .file-drop-target.file-drop-dragging-over-frame {
+        /* overlay a black mask when dragging over the frame */
+        border: none;
+        background-color: rgba(0, 0, 0, 0.65);
+        box-shadow: none;
+        z-index: 50;
+        opacity: 1;
+
+        /* typography */
+        color: white;
+    }
+
+    .file-drop-target.file-drop-dragging-over-target {
+        /* turn stuff orange when we are dragging over the target */
+        color: #ff6e40;
+    }
+}
