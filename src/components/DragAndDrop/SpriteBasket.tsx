@@ -40,7 +40,7 @@ export default function SpriteBasket<T>(props: SpriteBasketProps<T>) {
             basketRef.current = element!;
             droppableRef(element);
         },
-        [basketRef]
+        [basketRef, droppableRef]
     );
 
     return (

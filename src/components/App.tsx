@@ -97,7 +97,7 @@ export default function App() {
             imageMap.delete(id);
             setImageMap({ imageMap: imageMap });
         },
-        [imageMap]
+        [imageMap, spriteMap]
     );
 
     // при перетаскивании превьшки на игровую карту

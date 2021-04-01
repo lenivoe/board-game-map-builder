@@ -65,7 +65,6 @@ export default function GameBoardView({ spriteMap }: GameBoardViewProps) {
             for (const [id, info] of spriteMap) {
                 if (!spriteIdList.find((oldId) => oldId === id)) {
                     const pixiSpriteName = `${id}`;
-                    console.log('GameBoardView', info.x, info.y);
                     pixiApp.addImageIfMissing(pixiSpriteName, info.url, info.x, info.y);
                 }
             }
@@ -73,7 +72,7 @@ export default function GameBoardView({ spriteMap }: GameBoardViewProps) {
             // обновить список используемых на карте спрайтов
             setSpriteIdList([...spriteMap.keys()]);
         }
-    }, [pixiAppRef.current, spriteMap, spriteMap.size]);
+    }, [spriteMap, spriteMap.size, spriteIdList]);
 
     return <div ref={createGameBoard} className='PixiMapView' />;
 }

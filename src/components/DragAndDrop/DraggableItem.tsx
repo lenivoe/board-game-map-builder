@@ -10,7 +10,8 @@ interface DraggableItemProps<T> {
 
 const DraggableItem = React.memo(function <T>({ data, draggable, children }: DraggableItemProps<T>) {
     const [isDragging, draggableRef] = useDrag({
-        item: { type: draggable, data: data },
+        type: draggable,
+        item: { data: data },
         collect: (monitor) => monitor.isDragging(),
     });
 
