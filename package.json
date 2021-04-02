@@ -15,7 +15,7 @@
         "@types/uuid": "^8.3.0",
         "bootstrap": "^4.6.0",
         "node-sass": "5.0.0",
-        "pixi.js": "^6.0.1",
+        "pixi.js": "^5.3.9",
         "react": "^17.0.2",
         "react-bootstrap": "^1.5.2",
         "react-dnd": "^14.0.2",
