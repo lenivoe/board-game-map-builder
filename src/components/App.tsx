@@ -1,7 +1,7 @@
 import './App.scss';
 
 import assert from 'assert';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import Tab from 'react-bootstrap/Tab';
@@ -16,47 +16,38 @@ import ImageBasket from './DragAndDrop/ImageBasket';
 import SpriteBasket from './DragAndDrop/SpriteBasket';
 import DraggableItem from './DragAndDrop/DraggableItem';
 
-import { ImageDataList } from '../test_data';
+import FileReaderAsync from '../common/FileReaderAsync';
 
 export default function App() {
+    // nextId генерирует очередной id для изображения
+    // чем позже была загружена картинка, тем больше ее id
+    const [nextId] = useState(() => ((id) => () => id++)(0));
+
     // images from the files
     const [{ imageMap }, setImageMap] = useState(() => {
-        const map = new Map<number, { name: string; url: string }>();
-        map.set(0, {
-            name: 'карга миниатюра',
-            url: ImageDataList.hag,
-        });
-        map.set(1, {
-            name: 'копейщик',
-            url: ImageDataList.lancer,
-        });
-        map.set(2, {
-            name: map.get(0)!.name + ' (1)',
-            url: map.get(0)!.url,
-        });
-        map.set(3, {
-            name: map.get(1)!.name + ' (1)',
-            url: map.get(1)!.url,
-        });
-        map.set(4, {
-            name: map.get(0)!.name + ' (2)',
-            url: map.get(0)!.url,
-        });
-        map.set(5, {
-            name: map.get(1)!.name + ' (2)',
-            url: map.get(1)!.url,
-        });
-        return { imageMap: map };
+        const imageMap = new Map<number, { name: string; url: string }>();
+        return { imageMap };
     });
+
+    // test: init of imageMap
+    useEffect(() => {
+        const base64Promises = [...Array(5)].map((_, i) =>
+            FileReaderAsync.readFromUrl(`token_examples/token_${i + 1}.png`)
+        );
+
+        Promise.all(base64Promises).then((base64List) => {
+            base64List.forEach((base64, i) => {
+                imageMap.set(nextId(), { name: `token ${i + 1}`, url: base64 });
+            });
+
+            setImageMap({ imageMap });
+        });
+    }, [imageMap, nextId]);
 
     // images on the game map
     const [{ spriteMap }, setSpriteMap] = useState({
         spriteMap: new Map<number, TokenInfo>(),
     });
-
-    // nextId генерирует очередной id для изображения
-    // чем позже была загружена картинка, тем больше ее id
-    const [nextId] = useState(() => ((id) => () => id++)(0));
 
     // добавляет изображение в коллекцию
     // имя равно "<имя без расширения>"
@@ -110,7 +101,9 @@ export default function App() {
             const { name, url } = imageMap.get(imgId)!;
 
             // дублирующиеся спрайты отличаются числом в угловых скобках
-            const numRegex = new RegExp(`^(?:<(\\d+)>\\s)?${name.replace(/\((\d+)\)/, '\\($1\\)')}$`);
+            const numRegex = new RegExp(
+                `^(?:<(\\d+)>\\s)?${name.replace(/\((\d+)\)/, '\\($1\\)')}$`
+            );
             const num = [...spriteMap.values()]
                 .map((val) => {
                     const res = val.name.match(numRegex);

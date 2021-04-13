@@ -1,10 +1,16 @@
 export default class FileReaderAsync {
-    static read(file: File): Promise<string> {
+    static readFromBlob(blob: Blob): Promise<string> {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => resolve(reader.result as string);
             reader.onerror = reject;
-            reader.readAsDataURL(file);
+            reader.readAsDataURL(blob);
         });
+    }
+
+    static readFromUrl(url: string): Promise<string> {
+        return fetch(url)
+            .then((response) => response.blob())
+            .then((blob) => FileReaderAsync.readFromBlob(blob));
     }
 }

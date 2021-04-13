@@ -1,10 +1,10 @@
-import React, { useCallback } from 'react';
+import React, { ReactNode, useCallback } from 'react';
 import { FileDrop } from 'react-file-drop';
 import FileReaderAsync from '../../common/FileReaderAsync';
 
 interface ImageBasketProps {
     onFileLoadComplete: (name: string, url: string) => void;
-    children?: React.ReactNode;
+    children?: ReactNode;
 }
 
 export default function ImageBasket({ onFileLoadComplete, children }: ImageBasketProps) {
@@ -18,7 +18,9 @@ export default function ImageBasket({ onFileLoadComplete, children }: ImageBaske
                         alert(`image size > ${maxSizeMb} mb: "${file.name}"`);
                         return;
                     }
-                    FileReaderAsync.read(file).then((url) => onFileLoadComplete(file.name, url));
+                    FileReaderAsync.readFromBlob(file).then((url) =>
+                        onFileLoadComplete(file.name, url)
+                    );
                 }),
         [onFileLoadComplete]
     );

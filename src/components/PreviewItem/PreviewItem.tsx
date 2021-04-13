@@ -14,7 +14,11 @@ const PreviewItem = React.memo(({ id, name, url, onDelete }: PreviewItemProps) =
         <div className='d-flex flex-row bd-highlight mb-3 w-100'>
             {/* Image */}
             <div className='bd-highlight w-25 align-self-center'>
-                <img src={url} alt={name} style={{ maxWidth: '60px', maxHeight: '60px' }} />
+                <img
+                    src={url}
+                    alt={name}
+                    style={{ maxWidth: '60px', maxHeight: '60px' }}
+                />
             </div>
 
             {/* Title */}
@@ -24,7 +28,10 @@ const PreviewItem = React.memo(({ id, name, url, onDelete }: PreviewItemProps) =
 
             {/* Delete button */}
             <div className='bd-highlight align-self-center'>
-                <button onClick={onDeleteButtonClick} className='btn badge rounded-pill btn-danger'>
+                <button
+                    onClick={onDeleteButtonClick}
+                    className='btn badge rounded-pill btn-danger'
+                >
                     x
                 </button>
             </div>

@@ -1,14 +1,14 @@
-import React from 'react';
+import React, { memo, ReactNode } from 'react';
 import { useDrag } from 'react-dnd';
 import { DraggableType } from './DragAndDropTypes';
 
 interface DraggableItemProps<T> {
     data: T;
     draggable: DraggableType;
-    children?: React.ReactNode;
+    children?: ReactNode;
 }
 
-const DraggableItem = React.memo(function <T>({ data, draggable, children }: DraggableItemProps<T>) {
+const DraggableItem = memo(<T,>({ data, draggable, children }: DraggableItemProps<T>) => {
     const [isDragging, draggableRef] = useDrag({
         type: draggable,
         item: { data: data },

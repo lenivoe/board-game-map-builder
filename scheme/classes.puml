@@ -1,0 +1,39 @@
+@startuml board-game-map-builder
+
+class PixiApp {
+    scene: Scene
+}
+PixiApp o--> Scene
+
+
+class Scene {
+    grid: Grid
+}
+Scene *--> Grid
+
+
+interface Grid {
+    width: number
+    height: number
+    cellSize: number
+    color: RGBA
+    height: number[][]
+}
+Grid o--> MapToken
+
+class SquareGrid
+SquareGrid ..|> Grid
+
+class HexogonalGrid
+HexogonalGrid ..|> Grid
+
+
+
+class MapToken {
+    позиция и размеры токена в клетках
+    ..
+    boundBox: {x, y, width, height}
+    getTokensInArea
+}
+
+@enduml

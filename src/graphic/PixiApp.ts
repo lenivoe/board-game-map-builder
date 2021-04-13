@@ -1,15 +1,13 @@
 import * as PIXI from 'pixi.js';
-import DefaultLoggerBuilder from '../logger/DefaultLoggerBuilder';
-import ILogger from '../logger/ILogger';
-import { clamp } from '../common/Utils';
+import DefaultLoggerBuilder from './DefaultLoggerBuilder';
 import IResizable from '../common/IResizable';
 import IClosable from '../common/IClosable';
-import { IScene } from './PixiScene';
+import IPixiScene from './scene/IPixiScene';
 
 export interface IPixiViewport extends IResizable, IClosable {
     isSnappingGrid: boolean;
 
-    setScene(scene: IScene): void;
+    setScene(scene: IPixiScene): void;
     addImageIfMissing(name: string, url: string, x: number, y: number): void;
     removeImageIfExist(name: string): void;
 }
@@ -21,15 +19,19 @@ interface OptionalParams {
 
 export default class PixiApp implements IPixiViewport {
     /** replaceable logger writes to browser console by default */
-    logger: ILogger = DefaultLoggerBuilder.build(this);
+    logger = DefaultLoggerBuilder.inst.build(this);
 
     /** if true then image fitting to the cells */
     isSnappingGrid: boolean = true;
 
     private readonly app: PIXI.Application;
-    private scene!: IScene;
+    private scene!: IPixiScene;
 
-    constructor(readonly root: HTMLElement, scene: IScene, { width, height }: OptionalParams = {}) {
+    constructor(
+        readonly root: HTMLElement,
+        scene: IPixiScene,
+        { width, height }: OptionalParams = {}
+    ) {
         this.app = new PIXI.Application({
             backgroundColor: 0x00aa00,
             width: width ?? root.clientWidth,
@@ -39,7 +41,7 @@ export default class PixiApp implements IPixiViewport {
         this.setScene(scene);
     }
 
-    setScene(scene: IScene) {
+    setScene(scene: IPixiScene) {
         this.scene = scene;
 
         this.app.stage.removeChildren();
@@ -51,10 +53,7 @@ export default class PixiApp implements IPixiViewport {
 
     addImageIfMissing(name: string, url: string, x: number, y: number): void {
         if (!this.scene.hasImage(name)) {
-            const xInSceneSpace = clamp(x - this.scene.x, 0, this.scene.width);
-            const yInSceneSpace = clamp(y - this.scene.y, 0, this.scene.height);
-
-            this.scene.addImage(name, url, xInSceneSpace, yInSceneSpace, this.isSnappingGrid);
+            this.scene.addImage(name, url, x, y, this.isSnappingGrid);
         }
     }
 
