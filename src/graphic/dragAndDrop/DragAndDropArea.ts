@@ -1,14 +1,16 @@
 import assert from 'assert';
-import { Container, DisplayObject, Point } from 'pixi.js';
+import { Container, DisplayObject } from 'pixi.js';
+import IClosable from '../../common/IClosable';
 import DefaultLoggerBuilder from '../DefaultLoggerBuilder';
 import IDragLogic from './DragLogic/IDragLogic';
 
-export default class DragAndDropArea {
+export default class DragAndDropArea implements IClosable {
     logger = DefaultLoggerBuilder.inst.build(this);
 
     dragLogic: IDragLogic;
 
     private readonly area: Container;
+    private readonly areaOwner: Container;
     private target?: DisplayObject;
 
     constructor(areaOwner: Container, dragLogic: IDragLogic) {
@@ -16,7 +18,12 @@ export default class DragAndDropArea {
         this.area.addListener('pointermove', this.onDragMoveAcrossArea);
         areaOwner.addChild(this.area);
 
+        this.areaOwner = areaOwner;
         this.dragLogic = dragLogic;
+    }
+
+    close(): void {
+        this.areaOwner.removeChild(this.area);
     }
 
     attach(draggableObject: DisplayObject) {
@@ -53,11 +60,6 @@ export default class DragAndDropArea {
         this.target = e.target;
         this.dragLogic.onDragStart(this.target, e.data.global);
 
-        // // calculate offset of cursor relative to target position
-        // this.target.parent.toLocal(e.data.global, undefined, this.pointerOffset);
-        // this.pointerOffset.x -= this.target.x;
-        // this.pointerOffset.y -= this.target.y;
-
         // start listening to dragging on the area
         this.area.interactive = true;
     };
@@ -79,13 +81,6 @@ export default class DragAndDropArea {
         // if the user drags fast, which would make e.target become the stage.
 
         assert(this.target);
-
-        // const target = this.target!;
-
-        // // update of target.position
-        // target.parent.toLocal(e.data.global, undefined, target.position);
-        // target.x -= this.pointerOffset.x;
-        // target.y -= this.pointerOffset.y;
 
         this.dragLogic.onDragMove(this.target!, e.data.global);
     };

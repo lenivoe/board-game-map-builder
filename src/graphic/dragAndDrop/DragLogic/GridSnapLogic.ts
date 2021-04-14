@@ -1,14 +1,14 @@
 import { DisplayObject, Point } from 'pixi.js';
 import DefaultLoggerBuilder from '../../DefaultLoggerBuilder';
-import IGrid from '../../grid/IGrid';
+import IGridCollider from '../../grid/collider/IGridCollider';
 import IDragLogic from './IDragLogic';
 import DecoratorLogic from './DecoratorLogic';
 
 export default class GridSnapLogic extends DecoratorLogic {
     logger = DefaultLoggerBuilder.inst.build(this);
-    private grid: IGrid;
+    private grid: IGridCollider;
 
-    constructor(logic: IDragLogic, grid: IGrid) {
+    constructor(logic: IDragLogic, grid: IGridCollider) {
         super(logic);
         this.grid = grid;
     }

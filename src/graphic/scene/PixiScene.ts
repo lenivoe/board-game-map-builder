@@ -3,20 +3,18 @@ import * as PIXI from 'pixi.js';
 import { clamp } from '../../common/Utils';
 import IPixiScene from './IPixiScene';
 import DefaultLoggerBuilder from '../DefaultLoggerBuilder';
-import IGrid from '../grid/IGrid';
-import SquareGrid from '../grid/SquareGrid';
+import SquareGridCollider from '../grid/collider/SquareGridCollider';
 import DefaultDnDLogicBuilder from './DefaultDnDLogicBuilder';
 import DragAndDropArea from '../dragAndDrop/DragAndDropArea';
+import IGridView from '../grid/view/IGridView';
+import SquareGridView from '../grid/view/SquareGridView';
 
 export default class PixiScene implements IPixiScene {
-    readonly rowLen: number;
-    readonly columnLen: number;
-
     /** replaceable logger writes to browser console by default */
     logger = DefaultLoggerBuilder.inst.build(this);
 
     private readonly _container: PIXI.Container;
-    private grid: IGrid;
+    private grid: IGridView;
     private objectArea: DragAndDropArea;
 
     private tokenMap: Map<string, PIXI.DisplayObject> = new Map();
@@ -26,46 +24,39 @@ export default class PixiScene implements IPixiScene {
         assert(Number.isInteger(columnLen));
         assert(Number.isInteger(cellSize));
 
-        this.rowLen = rowLen;
-        this.columnLen = columnLen;
-
         this._container = new PIXI.Graphics()
             .beginFill(0x000000)
             .drawRect(0, 0, rowLen * cellSize, columnLen * cellSize);
         this._container.interactive = true;
 
-        this.grid = new SquareGrid(cellSize);
+        const gridColleder = new SquareGridCollider(rowLen, columnLen, cellSize);
+
         const alphaOnDrag = 0.5;
-        this.objectArea = new DragAndDropArea(
-            this._container,
-            // new GridSnapLogic(this.grid)
-            DefaultDnDLogicBuilder.inst.build(this.grid, alphaOnDrag)
-        );
+        const dndLogic = DefaultDnDLogicBuilder.inst.build(gridColleder, alphaOnDrag);
+
+        this.objectArea = new DragAndDropArea(this._container, dndLogic);
+
+        this.grid = new SquareGridView(this._container, gridColleder);
 
         /**
          * временная фигура для отладки
          */
-        // квадрат в середине
-        const box = new PIXI.Graphics()
-            .beginFill(0x00aabb)
-            .drawRect(0, 0, this.width / 3, this.height / 3);
-        box.position.set((this.width - box.width) / 2, (this.height - box.height) / 2);
-        this.container.addChild(box);
-
         // перекрестие
+        const lineWidth = 32;
+
         const hLine = new PIXI.Graphics()
             .beginFill(0x00ff00)
-            .drawRect(0, -1, this.width, 2);
+            .drawRect(0, -lineWidth / 2, this.width, lineWidth);
         hLine.position.set(0, this.height / 2);
         this.container.addChild(hLine);
 
         const vLine = new PIXI.Graphics()
             .beginFill(0x00ff00)
-            .drawRect(-1, 0, 2, this.height);
+            .drawRect(-lineWidth / 2, 0, lineWidth, this.height);
         vLine.position.set(this.width / 2, 0);
         this.container.addChild(vLine);
 
-        const point = new PIXI.Graphics().beginFill(0xff00ff).drawCircle(0, 0, 6);
+        const point = new PIXI.Graphics().beginFill(0xff00ff).drawCircle(0, 0, lineWidth);
         point.position.set(this.width / 2, this.height / 2);
         this.container.addChild(point);
     }
@@ -77,8 +68,14 @@ export default class PixiScene implements IPixiScene {
         return this.container.y;
     }
 
+    get rowLen(): number {
+        return this.grid.collider.rowLen;
+    }
+    get columnLen(): number {
+        return this.grid.collider.columnLen;
+    }
     get cellSize(): number {
-        return this.grid.cellSize;
+        return this.grid.collider.cellSize;
     }
 
     get container(): PIXI.Container {
@@ -122,13 +119,15 @@ export default class PixiScene implements IPixiScene {
         let { width, height } = sprite;
 
         if (isSnappingGrid) {
-            [x, y] = [this.grid.snapToGrid(x), this.grid.snapToGrid(y)];
+            const snapToGrid = (v: number) => this.grid.collider.snapToGrid(v);
+
+            [x, y] = [snapToGrid(x), snapToGrid(y)];
 
             if (width > this.cellSize) {
-                width = this.grid.snapToGrid(width);
+                width = snapToGrid(width);
             }
             if (height > this.cellSize) {
-                height = this.grid.snapToGrid(height);
+                height = snapToGrid(height);
             }
         }
 

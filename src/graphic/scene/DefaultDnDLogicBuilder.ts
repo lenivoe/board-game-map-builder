@@ -1,4 +1,4 @@
-import IGrid from '../grid/IGrid';
+import IGridCollider from '../grid/collider/IGridCollider';
 import MoveAndScaleLogic from '../dragAndDrop/DragLogic/MoveAndScaleLogic';
 import ColorAlphaLogic from '../dragAndDrop/DragLogic/ColorAlphaLogic';
 import CompositeLogic from '../dragAndDrop/DragLogic/CompositeLogic';
@@ -13,7 +13,7 @@ export default class DefaultDnDLogicBuilder {
         return DefaultDnDLogicBuilder._inst;
     }
 
-    build(grid: IGrid, alphaOnDrag: number): IDragLogic {
+    build(grid: IGridCollider, alphaOnDrag: number): IDragLogic {
         return new CompositeLogic(
             new GridSnapLogic(new MoveAndScaleLogic(), grid),
             new ColorAlphaLogic(alphaOnDrag)
