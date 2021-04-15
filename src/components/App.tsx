@@ -137,7 +137,7 @@ export default function App() {
                 <Row>
                     <Col xs='auto' sm={3}>
                         <Tabs defaultActiveKey='images' transition={false} id='left-bar'>
-                            <Tab eventKey='images' title='Images'>
+                            <Tab eventKey='images' className="ttab" title='Images'>
                                 <ImageBasket onFileLoadComplete={onFileLoadComplete}>
                                     ↓↓↓ drop images here ↓↓↓
                                     {[...imageMap.entries()]
@@ -159,7 +159,7 @@ export default function App() {
                                 </ImageBasket>
                             </Tab>
 
-                            <Tab eventKey='sprites' title={`Sprites (${spriteMap.size})`}>
+                            <Tab eventKey='sprites' className="ttab" title={`Sprites (${spriteMap.size})`}>
                                 {[...spriteMap.entries()]
                                     .sort(([idLeft], [idRight]) => idLeft - idRight)
                                     .map(([id, { name, url }]) => (
@@ -173,6 +173,14 @@ export default function App() {
                                     ))}
                             </Tab>
                         </Tabs>
+
+                        <div className="p-0 d-flex flex-column" id="layers_buttons">
+                            <div className="p-2"></div>
+                            <div className="btn-group">
+                                <button className="btn btn-outline-warning active" aria-current="page">Слой Карты</button>
+                                <button className="btn btn-outline-warning">Слой Героев</button>
+                            </div>
+                        </div>
                     </Col>
 
                     <SpriteBasket
