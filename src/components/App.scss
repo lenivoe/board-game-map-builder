@@ -14,8 +14,11 @@ body {
     }
 }
 
+.ttab {
+  height: 80vh;
+  overflow: auto;
+}
 .file-drop {
-    min-height: 70vh;
 
     .file-drop-target.file-drop-dragging-over-frame {
         /* overlay a black mask when dragging over the frame */
