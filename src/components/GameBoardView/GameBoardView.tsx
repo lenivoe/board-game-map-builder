@@ -26,7 +26,7 @@ export default function GameBoardView({ spriteMap }: GameBoardViewProps) {
         if (element != null && pixiAppRef.current == null && element.clientHeight !== 0) {
             const rowCellsAmount = 16;
             const columnCellsAmount = 12;
-            const cellSizeInPixels = 256;
+            const cellSizeInPixels = 64;
             const scene = new PixiScene(
                 rowCellsAmount,
                 columnCellsAmount,
