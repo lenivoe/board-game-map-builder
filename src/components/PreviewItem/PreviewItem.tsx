@@ -11,29 +11,32 @@ const PreviewItem = React.memo(({ id, name, url, onDelete }: PreviewItemProps) =
     const onDeleteButtonClick = useCallback(() => onDelete?.(id), [id, onDelete]);
 
     return (
-        <div className='d-flex flex-row bd-highlight mb-3 w-100'>
-            {/* Image */}
-            <div className='bd-highlight w-25 align-self-center'>
-                <img
-                    src={url}
-                    alt={name}
-                    style={{ maxWidth: '60px', maxHeight: '60px' }}
-                />
-            </div>
+        <div className='container p-1'>
+            <div className='row'>
+                {/* Image */}
+                <div className='col p-0 col-5 col-lg-6 col-xl-4'>
+                    <img
+                        src={url}
+                        alt={name}
+                        style={{ maxWidth: '60px', maxHeight: '60px' }}
+                    />
+                </div>
 
-            {/* Title */}
-            <div className='p-2 flex-grow-1 bd-highlight align-self-center'>
-                <p className='text-break text-start small'>{name}</p>
-            </div>
+                {/* Title */}
+                <div className='col p-0'>
+                    <p className='text-break text-start small'>{name}</p>
+                </div>
 
-            {/* Delete button */}
-            <div className='bd-highlight align-self-center'>
-                <button
-                    onClick={onDeleteButtonClick}
-                    className='btn badge rounded-pill btn-danger'
-                >
-                    x
-                </button>
+                {/* Delete button */}
+                <div className='col align-self-center p-0 col-2 col-lg-1'>
+                    <button
+                        onClick={onDeleteButtonClick}
+                        className='btn badge rounded-pill btn-danger'
+                        // style={{padding: '1'}}
+                    >
+                        x
+                    </button>
+                </div>
             </div>
         </div>
     );
