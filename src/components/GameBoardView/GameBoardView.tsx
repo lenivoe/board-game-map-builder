@@ -1,9 +1,18 @@
 import './GameBoardView.scss';
 
-import assert from 'assert';
-import { useCallback, useEffect, useRef, useState } from 'react';
+// import { useCallback, useEffect, useRef, useState } from 'react';
 import PixiApp from '../../graphic/PixiApp';
 import PixiScene from '../../graphic/scene/PixiScene';
+import { TokenLayerType } from '../../graphic/scene/IPixiScene';
+import DefaultLoggerBuilder from '../../graphic/DefaultLoggerBuilder';
+import React from 'react';
+import assert from 'assert';
+
+export enum Layer {
+    BACKGROUND = 0,
+    BARRIER,
+    PLAYER,
+}
 
 export interface TokenInfo {
     name: string;
@@ -13,71 +22,109 @@ export interface TokenInfo {
     url: string;
 }
 
-interface GameBoardViewProps {
-    spriteMap: Map<number, TokenInfo>;
+interface Props {
+    spriteMap: Map<number, TokenInfo>[];
+    activeLayer: Layer;
 }
 
-export default function GameBoardView({ spriteMap }: GameBoardViewProps) {
-    const [spriteIdList, setSpriteIdList] = useState<number[]>([]);
+export default class GameBoardView extends React.Component<Props> {
+    logger = DefaultLoggerBuilder.inst.build(this);
 
-    // инициализация экземпляром PixiApp только после прогрузки страницы
-    const pixiAppRef = useRef<PixiApp>();
-    const createGameBoard = useCallback((element: HTMLElement | null) => {
-        if (element != null && pixiAppRef.current == null && element.clientHeight !== 0) {
-            const rowCellsAmount = 16;
-            const columnCellsAmount = 12;
-            const cellSizeInPixels = 64;
-            const scene = new PixiScene(
-                rowCellsAmount,
-                columnCellsAmount,
-                cellSizeInPixels
-            );
-            pixiAppRef.current = new PixiApp(element, scene);
+    private pixiRoot!: HTMLElement;
+    private pixiApp: PixiApp | null = null;
+    private prevSpriteMap: Props['spriteMap'];
+
+    constructor(props: Props) {
+        super(props);
+        // для отслеживания измненеия в коллекции картинок
+        this.prevSpriteMap = this.props.spriteMap.map((sprites) => new Map(sprites));
+    }
+
+    async componentDidMount() {
+        assert(this.pixiRoot);
+
+        // создание сцены
+        const rowCellsAmount = 16;
+        const columnCellsAmount = 12;
+        const cellSizeInPixels = 64;
+        const scene = new PixiScene(rowCellsAmount, columnCellsAmount, cellSizeInPixels);
+        await scene.init();
+
+        // создание экземпляра pixi приложения
+        this.pixiApp = new PixiApp(this.pixiRoot, scene);
+
+        window.addEventListener('resize', this.onWindowResize);
+    }
+
+    componentWillUnmount() {
+        this.pixiApp?.close();
+        window.removeEventListener('resize', this.onWindowResize);
+    }
+
+    componentDidUpdate() {
+        if (this.pixiApp) {
+            this.changeLayer();
+            this.updateSprites();
         }
-    }, []);
+    }
 
-    // pixi app init
-    // первая половина выполнится единожды после инициализации pixiAppRef
-    // вторая перед уничтожением компонента
-    useEffect(() => {
-        assert(pixiAppRef.current != null);
+    render() {
+        return <div ref={this.createGameBoard} className='game_board_view' />;
+    }
 
-        const pixiApp = pixiAppRef.current;
-        const onWindowResize = () => {
-            pixiApp.resize(pixiApp.root.clientWidth, pixiApp.root.clientHeight);
-        };
-        window.addEventListener('resize', onWindowResize);
+    private readonly createGameBoard = (root: HTMLElement | null) => {
+        if (root != null && root.clientHeight > 0 && root.clientWidth > 0) {
+            this.pixiRoot = root;
+        }
+    };
 
-        return () => {
-            pixiAppRef.current = undefined;
-            window.removeEventListener('resize', onWindowResize);
-            pixiApp.close();
-        };
-    }, []);
+    private updateSprites() {
+        const pixiApp = this.pixiApp!;
+        const sprites = this.props.spriteMap[this.props.activeLayer];
+        const prevSprites = this.prevSpriteMap[this.props.activeLayer];
 
-    // sprites update
-    useEffect(() => {
-        if (pixiAppRef.current != null) {
-            const pixiApp = pixiAppRef.current;
-
-            // удалить старые спрайты
-            spriteIdList
-                .filter((id) => !spriteMap.has(id))
-                .forEach((id) => pixiApp.removeImageIfExist(`${id}`));
-
-            // добавить новые спрайты
-            for (const [id, info] of spriteMap) {
-                if (!spriteIdList.find((oldId) => oldId === id)) {
-                    const pixiSpriteName = `${id}`;
-                    pixiApp.addImageIfMissing(pixiSpriteName, info.url, info.x, info.y);
-                }
+        // удалить старые спрайты из pixiApp и из истории
+        for (const [oldId, oldInfo] of prevSprites) {
+            if (!sprites.has(oldId)) {
+                pixiApp.removeImageIfExist(oldInfo.name);
+                prevSprites.delete(oldId);
             }
-
-            // обновить список используемых на карте спрайтов
-            setSpriteIdList([...spriteMap.keys()]);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally missed spriteIdList
-    }, [spriteMap, spriteMap.size]);
 
-    return <div ref={createGameBoard} className='PixiMapView' />;
+        // добавить новые спрайты в pixiApp и записать их в историю
+        for (const [id, info] of sprites) {
+            if (!prevSprites.has(id)) {
+                pixiApp.addImageIfMissing(info.name, info.url, info.x, info.y);
+                prevSprites.set(id, info);
+            }
+        }
+    }
+
+    private changeLayer() {
+        let layer: TokenLayerType;
+
+        switch (this.props.activeLayer) {
+            case Layer.BACKGROUND:
+                layer = TokenLayerType.BACKGROUND;
+                break;
+            case Layer.BARRIER:
+                layer = TokenLayerType.BARRIER;
+                break;
+            case Layer.PLAYER:
+                layer = TokenLayerType.PLAYER;
+                break;
+            default:
+                this.logger.err('unexpected active layer:', this.props.activeLayer);
+                return;
+        }
+
+        this.pixiApp!.changeLayer(layer);
+    }
+
+    private readonly onWindowResize = () => {
+        if (this.pixiApp) {
+            const { clientWidth, clientHeight } = this.pixiRoot;
+            this.pixiApp.resize(clientWidth, clientHeight);
+        }
+    };
 }

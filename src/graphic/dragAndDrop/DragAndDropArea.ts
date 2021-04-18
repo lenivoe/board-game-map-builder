@@ -15,6 +15,7 @@ export default class DragAndDropArea implements IClosable {
 
     constructor(areaOwner: Container, dragLogic: IDragLogic) {
         this.area = new Container();
+        this.area.name = 'drag and drop area';
         this.area.addListener('pointermove', this.onDragMoveAcrossArea);
         areaOwner.addChild(this.area);
 

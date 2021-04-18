@@ -1,5 +1,11 @@
 import * as PIXI from 'pixi.js';
 
+export enum TokenLayerType {
+    BACKGROUND = 0,
+    BARRIER,
+    PLAYER,
+}
+
 export default interface IPixiScene {
     /** sprite container. do not use it */
     container: PIXI.Container;
@@ -23,6 +29,9 @@ export default interface IPixiScene {
     /** scene height without scale */
     height: number;
 
+    /** render by renderer of pixi app */
+    render(renderer: PIXI.Renderer): void;
+
     /** place scene to the center of the rectangle */
     centerTo(x: number, y: number): void;
     /** scales scene to the specified size */
@@ -35,20 +44,27 @@ export default interface IPixiScene {
      * @param y y of left-top corner in pixels
      * @param isSnappingGrid if true then image fitting to the cells
      */
-    addImage(
+    addToken(
         name: string,
         base64str: string,
         x: number,
         y: number,
         isSnappingGrid: boolean
-    ): void;
+    ): boolean;
 
     /** @param name unique image name */
-    removeImageIfExist(name: string): void;
+    removeToken(name: string): boolean;
 
     /**
      * @param name unique image name
      * @returns true if scene has image with such name
      */
-    hasImage(name: string): boolean;
+    hasToken(name: string): boolean;
+
+    /**
+     * set active layer
+     *
+     * it can affect the view, adding and removing tokens
+     */
+    changeLayer(layer: TokenLayerType): void;
 }
