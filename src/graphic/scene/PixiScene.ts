@@ -53,7 +53,7 @@ export default class PixiScene implements IPixiScene {
 
         // контейнер, закрывемый туманом
         this.foggyContainer = new PIXI.Graphics()
-            .beginFill(0xff00ff)
+            .beginFill(0x002000)
             .drawRect(0, 0, width, height);
 
         const gridColleder = new SquareGridCollider(rowLen, columnLen, cellSize);
