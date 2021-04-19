@@ -44,11 +44,15 @@ export default class GameBoardView extends React.Component<Props> {
         assert(this.pixiRoot);
 
         // создание сцены
-        const rowCellsAmount = 16;
-        const columnCellsAmount = 12;
+        const rowCellsAmount = 24;
+        const columnCellsAmount = 20;
         const cellSizeInPixels = 64;
-        const scene = new PixiScene(rowCellsAmount, columnCellsAmount, cellSizeInPixels);
-        await scene.init();
+
+        const scene = await PixiScene.create(
+            rowCellsAmount,
+            columnCellsAmount,
+            cellSizeInPixels
+        );
 
         // создание экземпляра pixi приложения
         this.pixiApp = new PixiApp(this.pixiRoot, scene);

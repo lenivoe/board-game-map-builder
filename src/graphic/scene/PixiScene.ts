@@ -8,12 +8,13 @@ import DefaultDnDLogicBuilder from './DefaultDnDLogicBuilder';
 import DragAndDropArea from '../dragAndDrop/DragAndDropArea';
 import IGridView from '../grid/view/IGridView';
 import SquareGridView from '../grid/view/SquareGridView';
+import ConsoleLogger from '../../logger/ConsoleLogger';
 
-interface ShadowcastShaderUniforms {
+interface FogOfWarShaderUniforms {
     uObserverAmount: number;
-    uObserverPosList: number[];
-    uObserverRadiusList: number[];
-    uShadowColor: number[];
+    uObserverPosList?: number[];
+    uObserverRadiusList?: number[];
+    uBarrierTex: PIXI.Texture;
 }
 
 export default class PixiScene implements IPixiScene {
@@ -22,82 +23,121 @@ export default class PixiScene implements IPixiScene {
 
     private readonly _container: PIXI.Container;
     private grid: IGridView;
-    private objectArea: DragAndDropArea;
+    private dndArea: DragAndDropArea;
 
-    private readonly shadowcastShader!: PIXI.Filter;
     private layerType: TokenLayerType = TokenLayerType.PLAYER;
+
+    private readonly barrierRT: PIXI.RenderTexture;
+    private readonly fogOfWarRT: PIXI.RenderTexture;
+    private readonly fogOfWarSprite: PIXI.Sprite;
+    private readonly fogOfWarShader: PIXI.Filter;
+
+    private readonly foggyContainer: PIXI.Container;
+    private readonly fogMaskSprite: PIXI.Sprite;
+
     private readonly tokens: PIXI.Container[];
 
-    private loader = new PIXI.Loader();
-
-    constructor(rowLen: number, columnLen: number, cellSize: number = 50) {
-        assert(Number.isInteger(rowLen));
-        assert(Number.isInteger(columnLen));
-        assert(Number.isInteger(cellSize));
+    private constructor(
+        rowLen: number,
+        columnLen: number,
+        cellSize: number,
+        resources: PIXI.IResourceDictionary
+    ) {
+        assert(Number.isInteger(rowLen) && rowLen > 0);
+        assert(Number.isInteger(columnLen) && columnLen > 0);
+        assert(Number.isInteger(cellSize) && cellSize > 0);
 
         const [width, height] = [rowLen * cellSize, columnLen * cellSize];
 
-        this._container = new PIXI.Graphics()
-            .beginFill(0x000000)
+        this._container = new PIXI.Container();
+
+        // контейнер, закрывемый туманом
+        this.foggyContainer = new PIXI.Graphics()
+            .beginFill(0xff00ff)
             .drawRect(0, 0, width, height);
-        this._container.interactive = true;
-
-        this.tokens = [new PIXI.Container(), new PIXI.Container(), new PIXI.Container()];
-        this.tokens[TokenLayerType.BACKGROUND].name = 'BACKGROUND';
-        this.tokens[TokenLayerType.BARRIER].name = 'BARRIER';
-        this.tokens[TokenLayerType.PLAYER].name = 'PLAYER';
-
-        this._container.addChild(...this.tokens);
 
         const gridColleder = new SquareGridCollider(rowLen, columnLen, cellSize);
 
         const alphaOnDrag = 0.5;
         const dndLogic = DefaultDnDLogicBuilder.inst.build(gridColleder, alphaOnDrag);
 
-        this.objectArea = new DragAndDropArea(this._container, dndLogic);
+        // drag and drop area
+        this.dndArea = new DragAndDropArea(this.foggyContainer, dndLogic);
 
+        // tokens' collection
+        this.tokens = Array(Object.keys(TokenLayerType).length / 2)
+            .fill(null)
+            .map((_, i) => {
+                const layer = new PIXI.Container();
+                layer.name = TokenLayerType[i];
+                return layer;
+            });
+        this.foggyContainer.addChild(...this.tokens);
+
+        // fog of war
+        this.barrierRT = PIXI.RenderTexture.create({ width, height });
+        this.fogOfWarRT = PIXI.RenderTexture.create({ width, height });
+
+        const uniforms: FogOfWarShaderUniforms = {
+            uObserverAmount: 0,
+            uObserverPosList: [0, 0],
+            uObserverRadiusList: [0],
+            uBarrierTex: this.barrierRT,
+        };
+
+        this.fogOfWarShader = new PIXI.Filter(
+            resources.vertDefault.data,
+            resources.fragFogOfWar.data,
+            uniforms
+        );
+
+        this.fogOfWarSprite = new PIXI.Sprite(this.fogOfWarRT);
+        this.fogOfWarSprite.name = 'fogOfWarSprite';
+        this.fogOfWarSprite.filters = [this.fogOfWarShader];
+
+        this.fogMaskSprite = new PIXI.Sprite(this.fogOfWarRT);
+        this.fogMaskSprite.name = 'fogScreenSprite';
+        this._container.addChild(this.fogMaskSprite);
+
+        this.foggyContainer.mask = this.fogMaskSprite;
+        this._container.addChild(this.foggyContainer);
+
+        // grid
         this.grid = new SquareGridView(this._container, gridColleder);
-
-        /**
-         * TODO: fix!
-         */
-        // this.initFogOfWarShader();
-        /**
-         * TODO: fix!
-         */
-
-        /**
-         * временная фигура для отладки
-         */
-        // перекрестие
-        const lineWidth = 32;
-
-        const point = new PIXI.Graphics().beginFill(0xff00ff).drawCircle(0, 0, lineWidth);
-        point.position.set(this.width / 2, this.height / 2);
-        this.container.addChild(point);
     }
 
-    async init(): Promise<void> {
-        return new Promise<void>((resolve, reject) => {
-            this.loader
+    static async create(
+        rowLen: number,
+        columnLen: number,
+        cellSize: number
+    ): Promise<PixiScene> {
+        const logger = ConsoleLogger.inst;
+
+        // loading of shaders sources
+        const loader = new PIXI.Loader();
+        await new Promise<void>((resolve, reject) => {
+            loader
                 .add('vertDefault', 'glsl/default.vert')
+                .add('fragFieldOfView', 'glsl/field_of_view.frag')
                 .add('fragFogOfWar', 'glsl/fog_of_war.frag');
 
             type Resources = {
                 vertDefault: PIXI.LoaderResource;
                 fragFogOfWar: PIXI.LoaderResource;
             };
-            this.loader.onComplete.add((loader: PIXI.Loader, resources: Resources) => {
-                this.logger.info('async init:', loader, resources);
+            loader.onComplete.add((_loader: PIXI.Loader, resources: Resources) => {
+                logger.info('async init:', resources);
                 resolve();
             });
-            this.loader.onError.add((err) => {
-                this.logger.err('async init:', err);
+            loader.onError.add((_loader, err) => {
+                logger.err('async init:', err);
                 reject(err);
             });
 
-            this.loader.load();
+            loader.load();
         });
+
+        return new PixiScene(rowLen, columnLen, cellSize, loader.resources);
     }
 
     changeLayer(layer: TokenLayerType): void {
@@ -106,6 +146,108 @@ export default class PixiScene implements IPixiScene {
         );
 
         this.layerType = layer;
+
+        this.foggyContainer.mask =
+            layer === TokenLayerType.PLAYER ? this.fogMaskSprite : null;
+
+        switch (layer) {
+            case TokenLayerType.BACKGROUND:
+                break;
+            case TokenLayerType.BARRIER:
+                break;
+            case TokenLayerType.PLAYER:
+                break;
+            default:
+                throw new Error(`undexpected ${typeof TokenLayerType}`);
+        }
+    }
+
+    render(renderer: PIXI.Renderer): void {
+        if (this.layerType === TokenLayerType.PLAYER) {
+            const visibilityRange = 5.5 * this.cellSize;
+
+            const observers = this.tokens[TokenLayerType.PLAYER].children;
+
+            const uniforms: FogOfWarShaderUniforms = this.fogOfWarShader.uniforms;
+            uniforms.uObserverAmount = observers.length;
+            if (observers.length > 0) {
+                uniforms.uObserverPosList = observers.flatMap(({ x, y }) => [
+                    x + this.cellSize * 0.5,
+                    y + this.cellSize * 0.5,
+                ]);
+                uniforms.uObserverRadiusList = observers.map((_) => visibilityRange);
+            }
+
+            renderer.render(this.tokens[TokenLayerType.BARRIER], this.barrierRT, true);
+            renderer.render(this.fogOfWarSprite, this.fogOfWarRT, false);
+        }
+    }
+
+    centerTo(x: number, y: number) {
+        const updatedX = x - this.container.width / 2;
+        const updatedY = y - this.container.height / 2;
+        this.container.position.set(updatedX, updatedY);
+    }
+
+    scaleTo(width: number, height: number) {
+        const scaledWidth = width / this.width;
+        const scaledHeight = height / this.height;
+        this.scale = Math.min(scaledWidth, scaledHeight);
+
+        this.grid.redraw();
+    }
+
+    addToken(name: string, url: string, x: number, y: number, isSnappingGrid: boolean) {
+        if (this.hasToken(name)) {
+            return false;
+        }
+
+        const sprite = PIXI.Sprite.from(url);
+
+        x = clamp((x - this.x) / this.scale, 0, this.width);
+        y = clamp((y - this.y) / this.scale, 0, this.height);
+
+        let { width, height } = sprite;
+
+        if (isSnappingGrid) {
+            const snapToGrid = (v: number) => this.grid.collider.snapToGrid(v);
+
+            [x, y] = [snapToGrid(x), snapToGrid(y)];
+
+            if (width > this.cellSize) {
+                width = snapToGrid(width);
+            }
+            if (height > this.cellSize) {
+                height = snapToGrid(height);
+            }
+        }
+
+        sprite.name = name;
+        sprite.position.set(x, y);
+        sprite.width = width;
+        sprite.height = height;
+
+        this.logger.info(
+            `new sprite <id=${sprite.name}, x=${sprite.x}, y=${sprite.y}, w=${sprite.width}, h=${sprite.height}>`
+        );
+
+        this.dndArea.attach(sprite);
+        this.layer.addChild(sprite);
+
+        return true;
+    }
+
+    removeToken(name: string): boolean {
+        const token: PIXI.DisplayObject | null = this.layer.getChildByName(name);
+        if (token) {
+            this.dndArea.detach(token);
+            this.layer.removeChild(token);
+        }
+        return token != null;
+    }
+
+    hasToken(name: string): boolean {
+        return this.layer.getChildByName(name) != null;
     }
 
     get x(): number {
@@ -143,128 +285,7 @@ export default class PixiScene implements IPixiScene {
         return this.columnLen * this.cellSize;
     }
 
-    render(renderer: PIXI.Renderer): void {
-        // if (!this.shadowcastShader) {
-        //     return;
-        // }
-        // // renderer.render(this.container, undefined, true);
-        // const tokens = [...this.tokens[this.layerType].values()];
-        // const uniforms = this.shadowcastShader.uniforms;
-        // uniforms.uObserverAmount = tokens.length;
-        // uniforms.uObserverPosList = tokens.flatMap(({ x, y }) => [x, y]);
-        // uniforms.uObserverRadiusList = [5 * this.cellSize];
-        // // renderer.render(circleWall, fogOfWarRT, true);
-    }
-
-    centerTo(x: number, y: number) {
-        const updatedX = x - this.container.width / 2;
-        const updatedY = y - this.container.height / 2;
-        this.container.position.set(updatedX, updatedY);
-    }
-
-    scaleTo(width: number, height: number) {
-        const scaledWidth = width / this.width;
-        const scaledHeight = height / this.height;
-        this.scale = Math.min(scaledWidth, scaledHeight);
-    }
-
-    addToken(name: string, url: string, x: number, y: number, isSnappingGrid: boolean) {
-        if (this.hasToken(name)) {
-            return false;
-        }
-
-        const sprite = PIXI.Sprite.from(url);
-
-        x = clamp((x - this.x) / this.scale, 0, this.width);
-        y = clamp((y - this.y) / this.scale, 0, this.height);
-
-        let { width, height } = sprite;
-
-        if (isSnappingGrid) {
-            const snapToGrid = (v: number) => this.grid.collider.snapToGrid(v);
-
-            [x, y] = [snapToGrid(x), snapToGrid(y)];
-
-            if (width > this.cellSize) {
-                width = snapToGrid(width);
-            }
-            if (height > this.cellSize) {
-                height = snapToGrid(height);
-            }
-        }
-
-        sprite.name = name;
-        sprite.position.set(x, y);
-        sprite.width = width;
-        sprite.height = height;
-
-        this.logger.info(
-            `new sprite <id=${sprite.name}, x=${sprite.x}, y=${sprite.y}, w=${sprite.width}, h=${sprite.height}>`
-        );
-
-        this.objectArea.attach(sprite);
-
-        this.logger.debug(sprite.name, sprite.parent.name);
-
-        this.layer.addChild(sprite);
-
-        this.logger.debug(sprite.name, sprite.parent.name);
-
-        return true;
-    }
-
-    removeToken(name: string): boolean {
-        const token: PIXI.DisplayObject | null = this.layer.getChildByName(name);
-        if (token) {
-            this.objectArea.detach(token);
-            this.layer.removeChild(token);
-        }
-        return token != null;
-    }
-
-    hasToken(name: string): boolean {
-        return this.layer.getChildByName(name) != null;
-    }
-
     private get layer(): PIXI.Container {
         return this.tokens[this.layerType];
-    }
-
-    private initFogOfWarShader() {
-        const fogOfWarRT = PIXI.RenderTexture.create({
-            width: this.width,
-            height: this.height,
-        });
-        const forOfWarSprite = new PIXI.Sprite(fogOfWarRT);
-        forOfWarSprite.name = 'shadowedSprite';
-
-        const uniforms: ShadowcastShaderUniforms = {
-            uObserverAmount: 0,
-            uObserverPosList: [],
-            uObserverRadiusList: [],
-            uShadowColor: [0, 0, 0, 0.97],
-        };
-
-        const shadowmapFilter = new PIXI.Filter(
-            this.loader.resources.vertDefault.data,
-            this.loader.resources.fragFogOfWar.data,
-            uniforms
-        );
-
-        forOfWarSprite.filters = [
-            shadowmapFilter,
-            new PIXI.filters.BlurFilter(),
-            new PIXI.filters.AlphaFilter(1),
-        ];
-
-        /**
-         * TODO: переделать препятствия и, вероятно, спрайт с туманом войны
-         */
-        const circleWall = new PIXI.Graphics()
-            .beginFill(0xff00ff)
-            .drawCircle(this.width / 2, this.height / 2, this.cellSize * 2);
-
-        this.container.addChild(circleWall);
-        this.container.addChild(forOfWarSprite);
     }
 }

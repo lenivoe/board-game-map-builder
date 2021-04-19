@@ -13,6 +13,8 @@ export default class DragAndDropArea implements IClosable {
     private readonly areaOwner: Container;
     private target?: DisplayObject;
 
+    private readonly displayObjects: DisplayObject[] = [];
+
     constructor(areaOwner: Container, dragLogic: IDragLogic) {
         this.area = new Container();
         this.area.name = 'drag and drop area';
@@ -36,13 +38,13 @@ export default class DragAndDropArea implements IClosable {
             .addListener('pointerup', this.onSpriteDragEnd)
             .addListener('pointerupoutside', this.onSpriteDragEnd);
 
-        this.area.addChild(draggableObject);
+        this.displayObjects.push(draggableObject);
 
         return draggableObject;
     }
 
     detach(draggableObject: DisplayObject) {
-        this.area.removeChild(draggableObject);
+        this.displayObjects.splice(this.displayObjects.indexOf(draggableObject), 1);
 
         draggableObject.interactive = false;
         draggableObject.buttonMode = false;
@@ -53,8 +55,8 @@ export default class DragAndDropArea implements IClosable {
             .removeListener('pointerupoutside', this.onSpriteDragEnd);
     }
 
-    hasObject(objectName: string): boolean {
-        return this.area.getChildByName(objectName) != null;
+    hasObject(name: string): boolean {
+        return this.displayObjects.findIndex((value) => value.name === name) >= 0;
     }
 
     private readonly onSpriteDragStart = (e: PIXI.InteractionEvent) => {
@@ -80,7 +82,6 @@ export default class DragAndDropArea implements IClosable {
     private readonly onDragMoveAcrossArea = (e: PIXI.InteractionEvent) => {
         // Don't use e.target because the pointer might move out of the draggable target
         // if the user drags fast, which would make e.target become the stage.
-
         assert(this.target);
 
         this.dragLogic.onDragMove(this.target!, e.data.global);
