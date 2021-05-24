@@ -117,9 +117,8 @@ export default class PixiScene implements IPixiScene {
         const loader = new PIXI.Loader();
         await new Promise<void>((resolve, reject) => {
             loader
-                .add('vertDefault', 'glsl/default.vert')
-                .add('fragFieldOfView', 'glsl/field_of_view.frag')
-                .add('fragFogOfWar', 'glsl/fog_of_war.frag');
+                .add('vertDefault', '/glsl/default.vert')
+                .add('fragFogOfWar', '/glsl/fog_of_war.frag');
 
             type Resources = {
                 vertDefault: PIXI.LoaderResource;
