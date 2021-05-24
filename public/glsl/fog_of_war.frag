@@ -4,7 +4,6 @@ precision highp float;
 
 const int OBSERVER_MAX_AMOUNT = 32; // максимальное количество наблюдателей
 const float VIEWING_MAX_RADIUS = 1024.; // максимальный радиус обзора
-const float POOR_VISION_RADIUS = 0.8; // доля обзора, в которой восприятие в два раза хуже
 const float ALPHA_THRESHOLD = 0.9; // все, что выше - препятствие, скрывающее обзор (отбрасывающее тень)
 
 varying vec2 vTextureCoord; // текстурные координаты
