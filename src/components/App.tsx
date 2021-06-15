@@ -51,10 +51,15 @@ export default class App extends React.Component<{}, { activeLayer: Layer }> {
     /** test: init of imageMap */
     async componentDidMount() {
         const paths = [
-            ...[...Array(5)].map((_, i) => `/token_examples/size64/token_${i + 1}.png`),
-            '/token_examples/ForestPathPublic.jpg',
-            '/token_examples/wall1.png',
-            '/token_examples/wall2.png',
+            ...[...Array(20)].map(
+                (_, i) => `/token_examples/heroes/${i + 1}.png`
+            ),
+            '/token_examples/map.jpg',
+            '/token_examples/a village 04.png',
+            '/token_examples/a village 10.png',
+            '/token_examples/Boulder 8 - 2x2.png',
+            '/token_examples/Boulder 9 - 1x1.png',
+            '/token_examples/Tree - Bare - 4x4.png',
         ];
         const base64Promises = paths.map((name) => FileReaderAsync.readFromUrl(name));
 

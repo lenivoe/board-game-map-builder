@@ -39,7 +39,7 @@ export default class PixiApp implements IPixiViewport {
         this.root = root;
 
         this.app = new PIXI.Application({
-            backgroundColor: 0x002000,
+            backgroundColor: 0x222222,
             width: width ?? root.clientWidth,
             height: height ?? root.clientHeight,
         });
